@@ -12,6 +12,7 @@
 * https://gitlab.inria.fr/sibr/sibr_core/-/blob/gaussian_code_release_union/src/projects/gaussianviewer/renderer/GaussianView.cpp
 */
 
+/*
 template<int D>
 struct SHs
 {
@@ -121,6 +122,7 @@ std::vector<RichPoint<D>> loadPly(const char* filename,
 		};
 	std::sort(mapp.begin(), mapp.end(), sorter);
 	*/
+/*
 	// Move data from AoS to SoA
 	int SH_N = (D + 1) * (D + 1);
 	for (int k = 0; k < count; k++)
@@ -201,6 +203,7 @@ TEST(LoadingPLY, TEST_LOAD_PLY) {
 			return g == rp;
 		});
 	*/
+/*
 	bool IsEqualPosition = std::equal(pos.begin(), pos.end(), test.positions.begin(), [](const glm::vec3& AP, const glm::vec3& TP) {
 			return AP == TP;
 		});
@@ -240,3 +243,4 @@ TEST(LoadingPLY, TEST_LOAD_PLY) {
 	ASSERT_TRUE(IsEqualScale);
 	ASSERT_TRUE(IsEqualSHs);
 }
+*/

@@ -1,5 +1,7 @@
 #pragma once
 #define GLFW_INCLUDE_VULKAN
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_LEFT_HANDED
 
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
@@ -16,7 +18,7 @@
 #include "gaussian.h"
 
 constexpr uint32_t SCALE_MODIFIER = 1;
-constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+constexpr int MAX_FRAMES_IN_FLIGHT = 1;
 
 const std::vector<const char*> VALIDATION_LAYERS = {
 	"VK_LAYER_KHRONOS_validation"
@@ -173,6 +175,7 @@ private:
 
 	uint32_t current_frame = 0;
 	size_t gaussian_count = 0;
+	int sh_count = 0;
 	bool framebuffer_resized = false;
 	std::vector<VkCommandBuffer> command_buffers;
 	std::vector<VkSemaphore> image_available_semaphore;

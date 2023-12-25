@@ -45,6 +45,13 @@ glm::vec3 ComputeCov2D(glm::vec3 mean, float focal_x, float focal_y, float tan_f
 
 
 TEST(TEST_PROJECTION, TEST_CONIC) {
+    const std::vector <glm::vec2> vertices = {
+    {-1.f, 1.f},
+    {1.0f, 1.f},
+    {1.0f, -1.f},
+    {-1.0f, -1.0f},
+    };
+
 	GaussianList gaussians = GenerateTestGaussians();
 	Camera camera;
     auto view = camera.GetView();
@@ -54,22 +61,24 @@ TEST(TEST_PROJECTION, TEST_CONIC) {
     auto tan_fovx = tan_fovy * WIDTH / HEIGHT;
     auto focal_y = HEIGHT / (2.0f * tan_fovy);
     auto focal_x = WIDTH / (2.0f * tan_fovx);
+
 	std::vector<glm::vec3> cov2ds;
     for (int i = 0; i < 4; i++) {
-       auto cov =  ComputeCov2D(gaussians.positions[i], focal_x, focal_y, tan_fovy, tan_fovy, gaussians.cov3ds[i], view);
+       auto cov =  ComputeCov2D(gaussians.positions[i], focal_x, focal_y, tan_fovx, tan_fovy, gaussians.cov3ds[i], view);
       
        float det = (cov.x * cov.z - cov.y * cov.y);
        if (det == 0.0f)
            return;
        float det_inv = 1.f / det;
        glm::vec3 conic = { cov.z * det_inv, -cov.y * det_inv, cov.x * det_inv };
-    }
+     
+       /*for (int j = 0; j < 6; j++) {
+           std::cout << gaussians.cov3ds[i][j] << " ";
+       }
+       std::cout << std::endl;
+       */
+       std::cout << to_string(conic) << std::endl;
+   }
 
 	ASSERT_TRUE(true);
 }
-
-/*
-TEST(TEST_PROJECTION, TEST_COV3D) {
-
-}
-*/

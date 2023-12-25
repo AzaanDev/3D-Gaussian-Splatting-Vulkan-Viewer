@@ -70,13 +70,13 @@ GaussianList LoadPly(const std::string& file_name) {
 GaussianList GenerateTestGaussians()
 {
 	GaussianList gaussians;
-	gaussians.positions = { {0.f,0.f,0.f}, {1.f,0.f,0.f}, {0.f, 1.f,0.f}, {0.f, 0.f, 1.f} };
-	gaussians.rotations = { {1.f,0.f,0.f, 0.f}, {1.f,0.f,0.f, 0.f}, {1.f,0.f,0.f, 0.f}, {1.f,0.f,0.f, 0.f} };
+	gaussians.rotations = { {1.f,0.f,0.f, 0.f}, {1.f,0.f,0.f, 0.f}, {1.f,0.f,0.f, 0.f}, {1.f, 0.f, 0.f, 0.f} };
+	gaussians.positions = { glm::vec3({0.f, 0.f, 0.f}), glm::vec3({1.f, 0.f, 0.f}), glm::vec3({0.f, 1.f, 0.f}), glm::vec3({0.f, 0.f, 1.f}) };
 	gaussians.scales = { {0.03f, 0.03f, 0.03f}, {0.2f, 0.03f, 0.03f}, {0.03f, 0.2f, 0.03f}, {0.03f, 0.03f, 0.2f} };
 	gaussians.shs = { {1.f, 0.f, 1.f}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f} };
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 3; j++) {
-			gaussians.shs[i][j] = gaussians.shs[i][j] - 0.5 / 0.28209;
+			gaussians.shs[i][j] = (gaussians.shs[i][j] - 0.5) / 0.28209;
 		}
 	}
 	gaussians.opacities = { 1, 1, 1, 1 };

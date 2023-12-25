@@ -636,10 +636,6 @@ void Application::CreateShaderStorageBuffer(const std::vector<T>& src, size_t si
     memcpy(data, src.data(), (size_t)buffer_size);
     vkUnmapMemory(device, staging_buffer_memory);
 
-    shader_storage_buffers.resize(MAX_FRAMES_IN_FLIGHT);
-    shader_storage_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT);
-
-
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         CreateBuffer(buffer_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, shader_storage_buffers[index + i], shader_storage_buffers_memory[index + i]);
         CopyBuffer(staging_buffer, shader_storage_buffers[index + i], buffer_size);
@@ -651,28 +647,28 @@ void Application::CreateShaderStorageBuffer(const std::vector<T>& src, size_t si
 
 void Application::LoadGaussiansGPU()
 {
-    //auto gaussians = LoadPly(file);
-    //auto gaussians = LoadPly("C:/Users/kovip/Desktop/3D/gaussian_splatting/tandt_db/output/point_cloud/iteration_30000/point_cloud.ply");
-    auto gaussians = GenerateTestGaussians();
+    auto gaussians = LoadPly(file);
+    // GaussianList gaussians = GenerateTestGaussians();
     gaussian_count = gaussians.positions.size();
+    sh_count = gaussians.shs[0].size();
 
     std::size_t size = 0;
     shader_storage_buffers.resize(MAX_FRAMES_IN_FLIGHT * 4);
     shader_storage_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT * 4);
 
     size = sizeof(glm::vec3) * gaussians.positions.size();
-    CreateShaderStorageBuffer<glm::vec3>(gaussians.positions, size, 0 * MAX_FRAMES_IN_FLIGHT);
 
+    CreateShaderStorageBuffer<glm::vec3>(gaussians.positions, size, 0 * MAX_FRAMES_IN_FLIGHT);
+    
     size = sizeof(float) * 6 * gaussians.cov3ds.size();
     CreateShaderStorageBuffer(gaussians.cov3ds, size, 1 * MAX_FRAMES_IN_FLIGHT);
 
     size = sizeof(float) * gaussians.opacities.size();
     CreateShaderStorageBuffer<float>(gaussians.opacities, size, 2 * MAX_FRAMES_IN_FLIGHT);
 
-    // size = sizeof(float) * 48 * gaussians.shs.size();
-    size = sizeof(float) * 3 * gaussians.shs.size();
-    CreateShaderStorageBuffer(gaussians.shs, size, 3 * MAX_FRAMES_IN_FLIGHT);
+    size = sizeof(float) * sh_count * gaussians.shs.size();
 
+    CreateShaderStorageBuffer(gaussians.shs, size, 3 * MAX_FRAMES_IN_FLIGHT);
 }
 
 
@@ -751,11 +747,10 @@ void Application::CreateDescriptorSets()
         descriptor_writes[0].descriptorCount = 1;
         descriptor_writes[0].pBufferInfo = &buffer_info;
         
-
         VkDescriptorBufferInfo storage_buffer_info_position{};
         storage_buffer_info_position.buffer = shader_storage_buffers[0 * MAX_FRAMES_IN_FLIGHT + i];
         storage_buffer_info_position.offset = 0;
-        storage_buffer_info_position.range = sizeof(glm::vec3) * gaussian_count;
+        storage_buffer_info_position.range = sizeof(float) * 3 * gaussian_count;
         descriptor_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptor_writes[1].dstSet = descriptor_sets[i];
         descriptor_writes[1].dstBinding = 1;
@@ -819,10 +814,9 @@ void Application::UpdateUniformBuffer(uint32_t current_image)
     ubo.tan_fovx = ubo.tan_fovy * WIDTH / HEIGHT;
     ubo.focal_y = HEIGHT / (2 * ubo.tan_fovy);
     ubo.focal_x = WIDTH / (2 * ubo.tan_fovx);
-    ubo.sh_dim = 3;
+    ubo.sh_dim = sh_count;
     ubo.render_mode = 1;
     memcpy(uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
-
 }
 
 void Application::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& memory)
