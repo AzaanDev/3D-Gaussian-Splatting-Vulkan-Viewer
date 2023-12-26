@@ -134,39 +134,7 @@ void main() {
     int sh_start = id * 48;
     vec3 dir = position - ubo.cam_pos;
     dir = normalize(dir);
-    outColor = SH_C0 * get_color(id * 48);
-
-    if (ubo.sh_dim > 3 && ubo.render_mode >= 1)  // 1 * 3
-	{
-        float x = dir.x;
-	    float y = dir.y;
-	    float z = dir.z;
-	    outColor = outColor - SH_C1 * y * get_color(sh_start + 1 * 3) + SH_C1 * z * get_color(sh_start + 2 * 3) - SH_C1 * x * get_color(sh_start + 3 * 3);
-    
-        if (ubo.sh_dim > 12 && ubo.render_mode >= 2)  // (1 + 3) * 3
-	    {
-	    	float xx = x * x, yy = y * y, zz = z * z;
-	    	float xy = x * y, yz = y * z, xz = x * z;
-	    	outColor = outColor +
-	    		SH_C2_0 * xy * get_color(sh_start + 4 * 3) +
-	    		SH_C2_1 * yz * get_color(sh_start + 5 * 3) +
-	    		SH_C2_2 * (2.0f * zz - xx - yy) * get_color(sh_start + 6 * 3) +
-	    		SH_C2_3 * xz * get_color(sh_start + 7 * 3) +
-	    		SH_C2_4 * (xx - yy) * get_color(sh_start + 8 * 3);
-
-	    	if (ubo.sh_dim > 27 && ubo.render_mode >= 3)  // (1 + 3 + 5) * 3
-	    	{
-	    		outColor = outColor +
-	    			SH_C3_0 * y * (3.0f * xx - yy) * get_color(sh_start + 9 * 3) +
-	    			SH_C3_1 * xy * z * get_color(sh_start + 10 * 3) +
-	    			SH_C3_2 * y * (4.0f * zz - xx - yy) * get_color(sh_start + 11 * 3) +
-	    			SH_C3_3 * z * (2.0f * zz - 3.0f * xx - 3.0f * yy) * get_color(sh_start + 12 * 3) +
-	    			SH_C3_4 * x * (4.0f * zz - xx - yy) * get_color(sh_start + 13 * 3) +
-	    			SH_C3_5 * z * (xx - yy) * get_color(sh_start + 14 * 3) +
-	    			SH_C3_6 * x * (xx - 3.0f * yy) * get_color(sh_start + 15 * 3);
-	    	}
-	    }
-    }
+    outColor = SH_C0 * get_color(id * 3);
 
     outColor += 0.5f;
     outConic = conic;
