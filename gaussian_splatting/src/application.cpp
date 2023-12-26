@@ -52,7 +52,7 @@ void Application::ShutDown()
     vkDestroyBuffer(device, vertex_buffer, nullptr);
     vkFreeMemory(device, vertex_buffer_memory, nullptr);
 
-    for (size_t i = 0; i < 4 * MAX_FRAMES_IN_FLIGHT; i++) {
+    for (size_t i = 0; i < 5 * MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroyBuffer(device, shader_storage_buffers[i], nullptr);
         vkFreeMemory(device, shader_storage_buffers_memory[i], nullptr);
     }
@@ -362,7 +362,7 @@ void Application::CreateRenderPass()
 
 void Application::CreateDescriptorSetLayout()
 {
-    std::array<VkDescriptorSetLayoutBinding, 5> layout_bindings{};
+    std::array<VkDescriptorSetLayoutBinding, 6> layout_bindings{};
 
     VkDescriptorSetLayoutBinding ubo_layout_binding{};
     ubo_layout_binding.binding = 0;
@@ -405,9 +405,17 @@ void Application::CreateDescriptorSetLayout()
     storage_layout_binding_shs.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     layout_bindings[4] = storage_layout_binding_shs;
 
+    VkDescriptorSetLayoutBinding storage_layout_binding_sort{};
+    storage_layout_binding_sort.binding = 5;
+    storage_layout_binding_sort.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    storage_layout_binding_sort.descriptorCount = 1;
+    storage_layout_binding_sort.pImmutableSamplers = nullptr;
+    storage_layout_binding_sort.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_bindings[5] = storage_layout_binding_sort;
+
     VkDescriptorSetLayoutCreateInfo layout_info{};
     layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_info.bindingCount = 5;
+    layout_info.bindingCount = 6;
     layout_info.pBindings = layout_bindings.data();
 
     if (vkCreateDescriptorSetLayout(device, &layout_info, nullptr, &descriptor_set_layout) != VK_SUCCESS) {
@@ -620,8 +628,6 @@ void Application::CreateIndexBuffer()
 template <typename T>
 void Application::CreateShaderStorageBuffer(const std::vector<T>& src, size_t size, int index)
 {
-    //auto gaussians = LoadPly("C:/Users/kovip/Desktop/3D/gaussian_splatting/tandt_db/output/point_cloud/iteration_30000/point_cloud.ply");
-    // 
     VkDeviceSize buffer_size = size;
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memory;
@@ -648,8 +654,8 @@ void Application::LoadGaussiansGPU()
     gaussian_count = gaussians.positions.size();
     sh_count = gaussians.shs[0].size();
     std::size_t size = 0;
-    shader_storage_buffers.resize(MAX_FRAMES_IN_FLIGHT * 4);
-    shader_storage_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT * 4);
+    shader_storage_buffers.resize(MAX_FRAMES_IN_FLIGHT * 5);
+    shader_storage_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT * 5);
 
     size = sizeof(glm::vec3) * gaussians.positions.size();
 
@@ -664,6 +670,11 @@ void Application::LoadGaussiansGPU()
     size = sizeof(float) * sh_count * gaussians.shs.size();
 
     CreateShaderStorageBuffer(gaussians.shs, size, 3 * MAX_FRAMES_IN_FLIGHT);
+
+    auto sort = SortGaussians(gaussians.positions, camera.GetView());
+
+    size = sizeof(int) * sort.size();
+    CreateShaderStorageBuffer(sort, size, 4 * MAX_FRAMES_IN_FLIGHT);
 }
 
 
@@ -684,7 +695,7 @@ void Application::CreateUniformBuffers()
 
 void Application::CreateDescriptorPool()
 {
-    std::array<VkDescriptorPoolSize, 5> pool_sizes{};
+    std::array<VkDescriptorPoolSize, 6> pool_sizes{};
     pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     pool_sizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -700,9 +711,12 @@ void Application::CreateDescriptorPool()
     pool_sizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     pool_sizes[4].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
+    pool_sizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    pool_sizes[5].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
     VkDescriptorPoolCreateInfo pool_info{};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.poolSizeCount = 5;
+    pool_info.poolSizeCount = 6;
     pool_info.pPoolSizes = pool_sizes.data();
     pool_info.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -733,7 +747,7 @@ void Application::CreateDescriptorSets()
         buffer_info.offset = 0;
         buffer_info.range = sizeof(UniformBufferObject);
             
-        std::array<VkWriteDescriptorSet, 5> descriptor_writes{};
+        std::array<VkWriteDescriptorSet, 6> descriptor_writes{};
         descriptor_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptor_writes[0].dstSet = descriptor_sets[i];
         descriptor_writes[0].dstBinding = 0;
@@ -790,7 +804,19 @@ void Application::CreateDescriptorSets()
         descriptor_writes[4].descriptorCount = 1;
         descriptor_writes[4].pBufferInfo = &storage_buffer_info_shs;
 
-        vkUpdateDescriptorSets(device, 5, descriptor_writes.data(), 0, nullptr);
+        VkDescriptorBufferInfo storage_buffer_info_sort{};
+        storage_buffer_info_sort.buffer = shader_storage_buffers[4 * MAX_FRAMES_IN_FLIGHT + i];
+        storage_buffer_info_sort.offset = 0;
+        storage_buffer_info_sort.range = sizeof(int) * gaussian_count;
+        descriptor_writes[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_writes[5].dstSet = descriptor_sets[i];
+        descriptor_writes[5].dstBinding = 5;
+        descriptor_writes[5].dstArrayElement = 0;
+        descriptor_writes[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        descriptor_writes[5].descriptorCount = 1;
+        descriptor_writes[5].pBufferInfo = &storage_buffer_info_sort;
+
+        vkUpdateDescriptorSets(device, 6, descriptor_writes.data(), 0, nullptr);
     }
 }
 

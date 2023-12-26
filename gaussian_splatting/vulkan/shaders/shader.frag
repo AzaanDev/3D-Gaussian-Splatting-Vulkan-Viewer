@@ -18,5 +18,5 @@ void main()
     if (opacity < 1.f / 255.f)
         discard;
     fragColor = vec4(inColor, opacity);
-	fragColor.a = fragColor.a > 0.22 ? 1 : 0;
+	// fragColor.a = fragColor.a > 0.22 ? 1 : 0;
  }

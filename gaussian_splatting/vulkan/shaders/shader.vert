@@ -45,6 +45,10 @@ layout(std430, binding = 4) buffer Color {
    float shs[];
 };
 
+layout(std430, binding = 5) buffer Sort {
+   int sorted[];
+};
+
 layout(location = 0) in vec2 inPosition;
 
 layout(location = 0) out vec3 outColor;
@@ -97,7 +101,7 @@ vec3 get_color(int index)
 }
 
 void main() {
-    int id = gl_InstanceIndex;
+    int id = sorted[gl_InstanceIndex];
     vec3 position = vec3(positions[id * 3], positions[id * 3 + 1], positions[id * 3 + 2]);
     vec4 position_view = ubo.view * vec4(position, 1.0f);
     vec4 position_screen = ubo.proj * position_view;

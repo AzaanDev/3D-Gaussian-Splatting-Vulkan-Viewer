@@ -1,6 +1,8 @@
 #include "gaussian.h"
 
 #include <iostream>
+#include <algorithm>
+#include <numeric>
 
 GaussianList LoadPly(const std::string& file_name) {
 	std::vector<Gaussian> gaussians;
@@ -158,4 +160,21 @@ std::array<float, 6> ComputeCov3D(glm::vec3 scale, glm::vec4 rotation, float sca
 	cov[5] = sigma[2][2];
 
 	return cov;
+}
+
+std::vector<int> SortGaussians(const std::vector<glm::vec3>& list, glm::mat3 view) 
+{
+	auto comparator = [view](const glm::vec3& a, const glm::vec3& b) {
+		glm::vec3 a_view = view * a;
+		glm::vec3 b_view = view * b;
+
+		return a_view.z < b_view.z;
+		};
+
+	std::vector<int> indices(list.size());
+	std::iota(indices.begin(), indices.end(), 0); 
+	std::sort(indices.begin(), indices.end(), [&list, comparator](int a, int b) {
+		return comparator(list[a], list[b]);
+		});
+	return indices;
 }

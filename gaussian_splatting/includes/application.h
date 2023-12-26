@@ -18,7 +18,7 @@
 #include "gaussian.h"
 
 constexpr uint32_t SCALE_MODIFIER = 1;
-constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+constexpr int MAX_FRAMES_IN_FLIGHT = 1;
 
 const std::vector<const char*> VALIDATION_LAYERS = {
 	"VK_LAYER_KHRONOS_validation"
