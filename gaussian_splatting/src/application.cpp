@@ -643,11 +643,10 @@ void Application::CreateShaderStorageBuffer(const std::vector<T>& src, size_t si
 
 void Application::LoadGaussiansGPU()
 {
-    //auto gaussians = LoadPly(file);
-    GaussianList gaussians = GenerateTestGaussians();
+    GaussianList gaussians = LoadPly(file);
+    //GaussianList gaussians = GenerateTestGaussians();
     gaussian_count = gaussians.positions.size();
     sh_count = gaussians.shs[0].size();
-
     std::size_t size = 0;
     shader_storage_buffers.resize(MAX_FRAMES_IN_FLIGHT * 4);
     shader_storage_buffers_memory.resize(MAX_FRAMES_IN_FLIGHT * 4);
@@ -782,7 +781,7 @@ void Application::CreateDescriptorSets()
         VkDescriptorBufferInfo storage_buffer_info_shs{};
         storage_buffer_info_shs.buffer = shader_storage_buffers[3 * MAX_FRAMES_IN_FLIGHT + i];
         storage_buffer_info_shs.offset = 0;
-        storage_buffer_info_shs.range = sizeof(float) * 3 * gaussian_count; //Change to 48
+        storage_buffer_info_shs.range = sizeof(float) * 48 * gaussian_count; 
         descriptor_writes[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptor_writes[4].dstSet = descriptor_sets[i];
         descriptor_writes[4].dstBinding = 4;
@@ -811,7 +810,7 @@ void Application::UpdateUniformBuffer(uint32_t current_image)
     ubo.focal_y = HEIGHT / (2 * ubo.tan_fovy);
     ubo.focal_x = WIDTH / (2 * ubo.tan_fovx);
     ubo.sh_dim = sh_count;
-    ubo.render_mode = 1;
+    ubo.render_mode = 3;
     memcpy(uniform_buffers_mapped[current_image], &ubo, sizeof(ubo));
 }
 
@@ -1073,25 +1072,23 @@ bool Application::CheckValidationLayerSupport()
 
     std::vector<VkLayerProperties> available_layers(layer_count);
     vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
-    
-    for (const char* layer_name : VALIDATION_LAYERS) {
-    bool layer_found = false;
 
-    for (const auto& layerProperties : available_layers) {
-        if (strcmp(layer_name, layerProperties.layerName) == 0) {
-            layer_found = true;
-            break;
+    for (const char* layer_name : VALIDATION_LAYERS) {
+        bool layer_found = false;
+
+        for (const auto& layerProperties : available_layers) {
+            if (strcmp(layer_name, layerProperties.layerName) == 0) {
+                layer_found = true;
+                break;
+            }
+        }
+
+        if (!layer_found) {
+            return false;
         }
     }
 
-    if (!layer_found) {
-        return false;
-    }
-}
-
-return true;
-
-    return false;
+    return true;
 }
 
 QueueFamilyIndices Application::FindQueueFamilies()
@@ -1168,7 +1165,7 @@ VkPresentModeKHR Application::ChooseSwapPresentMode(const std::vector<VkPresentM
         }
     }
     */
-    return VK_PRESENT_MODE_FIFO_KHR;
+    return VK_PRESENT_MODE_IMMEDIATE_KHR;
 }
 
 VkExtent2D Application::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)

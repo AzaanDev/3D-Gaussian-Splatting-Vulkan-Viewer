@@ -15,9 +15,6 @@
 #define SH_C3_5 1.445305721320277f
 #define SH_C3_6 -0.5900435899266435f
 
-#define COV3D_SIZE 6
-#define SH_SIZE 3
-
 layout(binding = 0) uniform UniformBufferObject {
 	mat4 view;
 	mat4 proj;
@@ -131,10 +128,42 @@ void main() {
     position_screen.xy = position_screen.xy + inPosition * quadwh_ndc;
     gl_Position = position_screen;
    
-    int sh_start = id * 48;
+    int color_index = id * 48;
     vec3 dir = position - ubo.cam_pos;
     dir = normalize(dir);
-    outColor = SH_C0 * get_color(id * 3);
+    outColor = SH_C0 * get_color(color_index);
+
+    if (ubo.render_mode > 0 && ubo.sh_dim > 3) 
+    {
+        float x = dir.x;
+        float y = dir.y;
+        float z = dir.z;
+        outColor = outColor - SH_C1 * y * get_color(color_index + 1 * 3) + SH_C1 * z * get_color(color_index + 2 * 3) - SH_C1 * x * get_color(color_index + 3 * 3);
+        
+        if (ubo.render_mode > 1 && ubo.sh_dim > 12)
+		{
+			float xx = x * x, yy = y * y, zz = z * z;
+			float xy = x * y, yz = y * z, xz = x * z;
+			outColor = outColor +
+				SH_C2_0 * xy * get_color(color_index + 4 * 3) +
+				SH_C2_1 * yz * get_color(color_index + 5 * 3) +
+				SH_C2_2 * (2.0f * zz - xx - yy) * get_color(color_index + 6 * 3) +
+				SH_C2_3 * xz * get_color(color_index + 7 * 3) +
+				SH_C2_4 * (xx - yy) * get_color(color_index + 8 * 3);
+
+			if (ubo.render_mode > 2 && ubo.sh_dim > 27)
+			{
+				outColor = outColor +
+					SH_C3_0 * y * (3.0f * xx - yy) * get_color(color_index + 9 * 3) +
+					SH_C3_1 * xy * z * get_color(color_index + 10 * 3) +
+					SH_C3_2 * y * (4.0f * zz - xx - yy) * get_color(color_index + 11 * 3) +
+					SH_C3_3 * z * (2.0f * zz - 3.0f * xx - 3.0f * yy) * get_color(color_index + 12 * 3) +
+					SH_C3_4 * x * (4.0f * zz - xx - yy) * get_color(color_index + 13 * 3) +
+					SH_C3_5 * z * (xx - yy) * get_color(color_index + 14 * 3) +
+					SH_C3_6 * x * (xx - 3.0f * yy) * get_color(color_index + 15 * 3);
+			}
+		}
+    }
 
     outColor += 0.5f;
     outConic = conic;

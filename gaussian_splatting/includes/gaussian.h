@@ -20,7 +20,7 @@ struct Gaussian {
 struct GaussianList {
     std::vector<glm::vec4> rotations;
     std::vector<glm::vec3> positions;
-    std::vector<std::array<float, 3>>  shs;
+    std::vector<std::array<float, 48>>  shs;
     std::vector<float> opacities;
     std::vector<glm::vec3> scales;
     std::vector<std::array<float, 6>> cov3ds;

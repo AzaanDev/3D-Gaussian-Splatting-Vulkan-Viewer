@@ -81,6 +81,9 @@ GaussianList GenerateTestGaussians()
 	}
 	gaussians.opacities = { 1, 1, 1, 1 };
 	gaussians.cov3ds = ComputeCov3D(gaussians.scales, gaussians.rotations);
+	gaussians.scales.clear();
+	gaussians.rotations.clear();
+
 	return gaussians;
 }
 

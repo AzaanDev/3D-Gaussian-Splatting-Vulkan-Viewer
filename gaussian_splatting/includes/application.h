@@ -18,14 +18,14 @@
 #include "gaussian.h"
 
 constexpr uint32_t SCALE_MODIFIER = 1;
-constexpr int MAX_FRAMES_IN_FLIGHT = 1;
+constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> VALIDATION_LAYERS = {
 	"VK_LAYER_KHRONOS_validation"
 };
 
 #ifdef NDEBUG
-const bool EnableValidationLayers = true;
+const bool EnableValidationLayers = false;
 #else
 const bool EnableValidationLayers = true;
 #endif
