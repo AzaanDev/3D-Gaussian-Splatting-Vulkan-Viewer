@@ -2,9 +2,13 @@
 
 #include "application.h"
 
-int main()
+int main(int argc, char* argv[])
 {
-	Application app("C:/Users/kovip/Desktop/3D/gaussian_splatting/tandt_db/output/point_cloud/iteration_30000/point_cloud.ply");
+	if (argc != 2) {
+		return 0;
+	}
+
+	Application app(argv[1]);
 	app.Run();
 	return 0;
 }
