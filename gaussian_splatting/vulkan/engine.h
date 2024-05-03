@@ -11,6 +11,7 @@
 
 #include "application.h"
 #include "camera.h"
+#include "types.h"
 
 constexpr unsigned int FRAMES_IN_FLIGHT = 2;
 
@@ -26,13 +27,6 @@ constexpr bool EnableValidationLayers = true;
 #endif
 */
 
-struct FrameData {
-	VkCommandPool m_CommandPool;
-	VkCommandBuffer m_CommandBuffer;
-	VkSemaphore m_SwapchainSemaphore;
-	VkSemaphore m_RenderSemaphore;
-	VkFence m_RenderFence;
-};
 
 class Engine {
 public:
@@ -50,7 +44,11 @@ public:
 	void DestorySwapchain();
 	void CreateCommands();
 	void CreateSyncObjects();
+
+	// Helper Functions
 	void TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout);
+	void CopyImage(VkCommandBuffer cmd, VkImage src, VkImage dest, VkExtent2D src_size, VkExtent2D dest_size);
+	void RenderBackground(VkCommandBuffer cmd);
 
 	// Inlines
 	inline void SetFrameBufferResized(bool resized);
@@ -59,6 +57,9 @@ private:
 	// GLFW and Window
 	GLFWwindow* m_Window;
 	VkExtent2D m_WindowExtend { WIDTH , HEIGHT };
+
+	// Allocator
+	VmaAllocator m_Allocator;
 
 	// Vulkan Objects
 	VkInstance m_Instance;
@@ -81,6 +82,10 @@ private:
 	// Queue
 	VkQueue m_GraphicsQueue;
 	uint32_t m_GraphicsQueueFamily;
+
+	// Image Rendering Objects
+	AllocatedImage m_RenderImage;
+	VkExtent2D m_RenderExtent;
 
 	// Window + Rendering Booleans
 	bool m_StopRendering = false;

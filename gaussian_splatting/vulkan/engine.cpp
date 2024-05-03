@@ -1,7 +1,8 @@
 #include "engine.h"
 
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
 #include <VkBootstrap.h>
-
 #include <thread>
 #include <chrono>
 #include <iostream>
@@ -56,18 +57,21 @@ void Engine::InitVulkan()
     }
 
     // Select features from Vulkan 1.3 API
-    VkPhysicalDeviceVulkan13Features features13{};
-    features13.dynamicRendering = true;
-    features13.synchronization2 = true;
+    VkPhysicalDeviceVulkan13Features features{};
+    features.dynamicRendering = true;
+    features.synchronization2 = true;
+    features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     VkPhysicalDeviceVulkan12Features features12{};
     features12.bufferDeviceAddress = true;
     features12.descriptorIndexing = true;
+    features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+
 
     // Find device that has the features
     vkb::PhysicalDeviceSelector selector{ vkb_inst };
     vkb::PhysicalDevice physical_device = selector
         .set_minimum_version(1, 3)
-        .set_required_features_13(features13)
+        .set_required_features_13(features)
         .set_required_features_12(features12)
         .set_surface(m_Surface)
         .select()
@@ -81,17 +85,24 @@ void Engine::InitVulkan()
     m_GraphicsQueue = device.get_queue(vkb::QueueType::graphics).value();
     m_GraphicsQueueFamily = device.get_queue_index(vkb::QueueType::graphics).value();
 
+    VmaAllocatorCreateInfo allocator_info = {};
+    allocator_info.physicalDevice = m_PhysicalDevice;
+    allocator_info.device = m_Device;
+    allocator_info.instance = m_Instance;
+    allocator_info.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    vmaCreateAllocator(&allocator_info, &m_Allocator);
+
     CreateSwapchain();
     CreateCommands();
     CreateSyncObjects();
-
-
 }
+
 
 
 
 void Engine::ShutDown()
 {
+
     for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
 
         //already written from before
@@ -107,8 +118,10 @@ void Engine::ShutDown()
     for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
         vkDestroyCommandPool(m_Device, m_Frames[i].m_CommandPool, nullptr);
     }
-
+    vkDestroyImageView(m_Device, m_RenderImage.m_ImageView, nullptr);
+    vmaDestroyImage(m_Allocator, m_RenderImage.m_Image, m_RenderImage.m_Allocation);
     DestorySwapchain();
+    vmaDestroyAllocator(m_Allocator);
     vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
     vkDestroyDevice(m_Device, nullptr);
     vkb::destroy_debug_utils_messenger(m_Instance, m_DebugMessager);
@@ -119,8 +132,8 @@ void Engine::ShutDown()
 
 void Engine::Render()
 {
-    vkWaitForFences(m_Device, 1, &GetFrame().m_RenderFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(m_Device, 1, &GetFrame().m_RenderFence);
+    vkWaitForFences(m_Device, 1, &GetFrame().m_RenderFence, true, 1000000000);
+    GetFrame().m_DeletionQueue.flush();
 
     uint32_t image_index;
     VkResult result = vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, GetFrame().m_SwapchainSemaphore, VK_NULL_HANDLE, &image_index);
@@ -129,18 +142,23 @@ void Engine::Render()
         std::cout << "Failed to cquire swap chain image!" << std::endl;
         exit(1); 
     }
+    vkResetFences(m_Device, 1, &GetFrame().m_RenderFence);
+
 
     VkCommandBuffer cmd = GetFrame().m_CommandBuffer;
     vkResetCommandBuffer(cmd, 0);
     VkCommandBufferBeginInfo cmd_begin_info = CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+
+    m_RenderExtent.width = m_RenderImage.m_ImageExtent.width;
+    m_RenderExtent.height = m_RenderImage.m_ImageExtent.height;
     vkBeginCommandBuffer(cmd, &cmd_begin_info);
-    TransitionImage(cmd, m_SwapchainImages[image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-    VkClearColorValue color;
-    float flash = std::abs(std::sin(m_FrameNumber / 120.f));
-    color = { { 0.0f, 0.0f, flash, 1.0f } };
-    VkImageSubresourceRange clear_range = ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
-    vkCmdClearColorImage(cmd, m_SwapchainImages[image_index], VK_IMAGE_LAYOUT_GENERAL, &color, 1, &clear_range);
-    TransitionImage(cmd, m_SwapchainImages[image_index], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    TransitionImage(cmd, m_RenderImage.m_Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    RenderBackground(cmd);
+    TransitionImage(cmd, m_RenderImage.m_Image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    TransitionImage(cmd, m_SwapchainImages[image_index], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    CopyImage(cmd, m_RenderImage.m_Image, m_SwapchainImages[image_index], m_RenderExtent, m_SwapChainExtent);
+    TransitionImage(cmd, m_SwapchainImages[image_index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     vkEndCommandBuffer(cmd);
 
     VkCommandBufferSubmitInfo cmd_info = CommandBufferSubmitInfo(cmd);
@@ -179,6 +197,7 @@ void Engine::Run()
 
 void Engine::CreateSwapchain()
 {
+
     vkb::SwapchainBuilder swapchain_builder{ m_PhysicalDevice, m_Device, m_Surface };
 
     m_SwapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -195,10 +214,32 @@ void Engine::CreateSwapchain()
     m_Swapchain = vkbSwapchain.swapchain;
     m_SwapchainImages = vkbSwapchain.get_images().value();
     m_SwapchainImageViews = vkbSwapchain.get_image_views().value();
+
+    
+    VkExtent3D image_extent = { m_WindowExtend.width, m_WindowExtend.height, 1};
+    m_RenderImage.m_ImageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    m_RenderImage.m_ImageExtent = image_extent;
+    VkImageUsageFlags flags{};
+    flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+    flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    VkImageCreateInfo image_info = ImageCreateInfo(m_RenderImage.m_ImageFormat, flags, image_extent);
+    VmaAllocationCreateInfo image_alloc_info = {};
+    image_alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    image_alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    vmaCreateImage(m_Allocator, &image_info, &image_alloc_info, &m_RenderImage.m_Image, &m_RenderImage.m_Allocation, nullptr);
+
+    VkImageViewCreateInfo view_info = ImageViewCreateInfo(m_RenderImage.m_ImageFormat, m_RenderImage.m_Image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(m_Device, &view_info, nullptr, &m_RenderImage.m_ImageView);
 }
 
 void Engine::DestorySwapchain()
 {
+    vmaDestroyImage(m_Allocator, m_RenderImage.m_Image, m_RenderImage.m_Allocation);
+    vkDestroyImageView(m_Device, m_RenderImage.m_ImageView, nullptr);
+
     vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
 
     for (int i = 0; i < m_SwapchainImageViews.size(); i++) {
@@ -276,6 +317,43 @@ void Engine::TransitionImage(VkCommandBuffer cmd, VkImage image, VkImageLayout c
     depInfo.pImageMemoryBarriers = &image_barrier;
 
     vkCmdPipelineBarrier2(cmd, &depInfo);
+}
+
+void Engine::CopyImage(VkCommandBuffer cmd, VkImage src, VkImage dest, VkExtent2D src_size, VkExtent2D dest_size)
+{
+    VkImageBlit2 blit{ .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2, .pNext = nullptr };
+    blit.srcOffsets[1].x = src_size.width;
+    blit.srcOffsets[1].y = src_size.height;
+    blit.srcOffsets[1].z = 1;
+    blit.dstOffsets[1].x = dest_size.width;
+    blit.dstOffsets[1].y = dest_size.height;
+    blit.dstOffsets[1].z = 1;
+    blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit.srcSubresource.baseArrayLayer = 0;
+    blit.srcSubresource.layerCount = 1;
+    blit.srcSubresource.mipLevel = 0;
+    blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit.dstSubresource.baseArrayLayer = 0;
+    blit.dstSubresource.layerCount = 1;
+    blit.dstSubresource.mipLevel = 0;
+    VkBlitImageInfo2 info{ .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2, .pNext = nullptr };
+    info.dstImage = dest;
+    info.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    info.srcImage = src;
+    info.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    info.filter = VK_FILTER_LINEAR;
+    info.regionCount = 1;
+    info.pRegions = &blit;
+    vkCmdBlitImage2(cmd, &info);
+}
+
+void Engine::RenderBackground(VkCommandBuffer cmd)
+{
+    VkClearColorValue color;
+    float flash = std::abs(std::sin(m_FrameNumber / 120.f));
+    color = { { 0.0f, 0.0f, flash, 1.0f } };
+    VkImageSubresourceRange clear_range = ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCmdClearColorImage(cmd, m_RenderImage.m_Image, VK_IMAGE_LAYOUT_GENERAL, &color, 1, &clear_range);
 }
 
 
