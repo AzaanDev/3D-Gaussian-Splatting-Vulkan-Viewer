@@ -12,7 +12,7 @@
 * https://gitlab.inria.fr/sibr/sibr_core/-/blob/gaussian_code_release_union/src/projects/gaussianviewer/renderer/GaussianView.cpp
 */
 
-/*
+
 template<int D>
 struct SHs
 {
@@ -122,7 +122,7 @@ std::vector<RichPoint<D>> loadPly(const char* filename,
 		};
 	std::sort(mapp.begin(), mapp.end(), sorter);
 	*/
-/*
+
 	// Move data from AoS to SoA
 	int SH_N = (D + 1) * (D + 1);
 	for (int k = 0; k < count; k++)
@@ -184,7 +184,7 @@ bool operator==(const Gaussian& lhs, const RichPoint<3>& rhs) {
 }
 
 TEST(LoadingPLY, TEST_LOAD_PLY) {
-	const std::string file = "C:/Users/kovip/Desktop/3D/gaussian_splatting/tests/static/point_cloud.ply";
+	const std::string file = "static/point_cloud.ply";
 	std::vector<glm::vec3> pos;
 	std::vector<SHs<3>> shs;
 	std::vector<float> opacities;
@@ -201,9 +201,8 @@ TEST(LoadingPLY, TEST_LOAD_PLY) {
 	bool IsEqual = std::equal(absolute.begin(), absolute.end(), test.begin(),
 		[](const RichPoint<3>& rp, const Gaussian& g) {
 			return g == rp;
-		});
-	*/
-/*
+		})
+		*/
 	bool IsEqualPosition = std::equal(pos.begin(), pos.end(), test.positions.begin(), [](const glm::vec3& AP, const glm::vec3& TP) {
 			return AP == TP;
 		});
@@ -243,4 +242,3 @@ TEST(LoadingPLY, TEST_LOAD_PLY) {
 	ASSERT_TRUE(IsEqualScale);
 	ASSERT_TRUE(IsEqualSHs);
 }
-*/

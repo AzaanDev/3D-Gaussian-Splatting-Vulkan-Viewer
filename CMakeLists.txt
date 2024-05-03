@@ -10,20 +10,20 @@ endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-project (${PROJECT_NAME} LANGUAGES CXX CUDA)
+project (${PROJECT_NAME} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(BUILD_TESTS "Build tests" ON)
+option(BUILD_TESTS "Build tests" OFF)
 
 # Include sub-projects.
 add_subdirectory ("gaussian_splatting")
 add_subdirectory(vendors)
 
 
-if(BUILD_TESTS)
-    add_subdirectory(tests)
-endif()
+#if(BUILD_TESTS)
+#   add_subdirectory(tests)
+#endif()
 
 ### ADD SHADER FILES

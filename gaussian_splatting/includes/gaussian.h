@@ -1,10 +1,11 @@
 #pragma once
 
+
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/string_cast.hpp>
 
 #include<vector>
+#include<string>
 #include<array>
 
 struct Gaussian {

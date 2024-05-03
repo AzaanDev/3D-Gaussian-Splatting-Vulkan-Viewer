@@ -77,7 +77,7 @@ TEST(TEST_PROJECTION, TEST_CONIC) {
        }
        std::cout << std::endl;
        */
-       std::cout << to_string(conic) << std::endl;
+       // std::cout << to_string(conic) << std::endl;
    }
 
 	ASSERT_TRUE(true);
