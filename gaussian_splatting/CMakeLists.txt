@@ -5,7 +5,9 @@
 	"includes/vertex.h" 
 	"includes/uniform.h"
 	"vulkan/initializers.h"
-  "vulkan/descriptors.h" "vulkan/pipelines.h")
+	"vulkan/descriptors.h" 
+	"vulkan/pipelines.h" 
+	"vulkan/engine.h")
 
 set(SOURCES
 	"main.cpp"
@@ -13,11 +15,13 @@ set(SOURCES
 	"src/gaussian.cpp" 
 	"src/application.cpp"
 	"vulkan/initializers.cpp"
- "vulkan/descriptors.cpp" "vulkan/pipelines.cpp")
+	"vulkan/descriptors.cpp" 
+	"vulkan/pipelines.cpp"
+	"vulkan/engine.cpp" )
 
 add_executable("gaussian_splatting" ${SOURCES} ${HEADERS})
 find_package(Vulkan REQUIRED)
 target_include_directories(gaussian_splatting PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/includes)
 target_include_directories(gaussian_splatting PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/vulkan)
 target_include_directories(gaussian_splatting PUBLIC ${Vulkan_INCLUDE_DIRS})
-target_link_libraries(gaussian_splatting PRIVATE glm Vulkan::Vulkan glfw)
+target_link_libraries(gaussian_splatting PRIVATE glm Vulkan::Vulkan glfw vk-bootstrap)
